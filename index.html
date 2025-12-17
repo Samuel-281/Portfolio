@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>谭苏恒 - 交互设计作品集</title>
+    <!-- 引入 Tailwind CSS (用于样式) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 React 和 ReactDOM (用于逻辑) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 Babel (用于解析 JSX 代码) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        /* 自定义滚动条样式，让页面更精致 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+        
+        /* 简单的淡入动画 */
+        .fade-in-up { animation: fadeInUp 0.8s ease-out forwards; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-black text-zinc-100 font-sans selection:bg-blue-500/30 selection:text-blue-200">
+    <!-- React 应用的挂载点 -->
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- 1. 图标组件 (使用 SVG 绘制，不依赖外部库，方便单文件运行) ---
+        const Icon = ({ path, className = "", size = 24 }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        // 定义用到的所有图标
+        const Icons = {
+            Mail: (props) => <Icon {...props} path={<><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></>} />,
+            Phone: (props) => <Icon {...props} path={<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>} />,
+            MapPin: (props) => <Icon {...props} path={<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>} />,
+            ChevronDown: (props) => <Icon {...props} path={<path d="m6 9 6 6 6-6"/>} />,
+            X: (props) => <Icon {...props} path={<path d="M18 6 6 18M6 6l12 12"/>} />,
+            ArrowRight: (props) => <Icon {...props} path={<path d="M5 12h14M12 5l7 7-7 7"/>} />,
+            Github: (props) => <Icon {...props} path={<path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>} />,
+            Code: (props) => <Icon {...props} path={<><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></>} />,
+            Layers: (props) => <Icon {...props} path={<><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></>} />,
+            Zap: (props) => <Icon {...props} path={<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>} />,
+            PenTool: (props) => <Icon {...props} path={<><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></>} />,
+            ExternalLink: (props) => <Icon {...props} path={<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></>} />,
+        };
+
+        // --- 2. 简历数据 ---
+        const RESUME_DATA = {
+            name: "谭苏恒",
+            role: "交互设计师 / UX Designer",
+            location: "深圳 / 长沙",
+            contact: {
+                phone: "199-7359-0617",
+                email: "530249138@qq.com"
+            },
+            education: [
+                {
+                    school: "悉尼大学 (USYD)",
+                    degree: "硕士 - 交互设计",
+                    time: "2023.07 - 2025.07",
+                    desc: "主修设计思维、体验设计、界面设计、声音设计、HTML代码等。"
+                },
+                {
+                    school: "悉尼科技大学 (UTS)",
+                    degree: "本科 - 游戏开发",
+                    time: "2021.02 - 2023.06",
+                    desc: "主修GDD编写、游戏开发理论、C#编程、Unity游戏开发、C++编程等。"
+                }
+            ],
+            experience: [
+                {
+                    company: "北京闻煊科技有限公司 (长沙)",
+                    role: "测试实习生",
+                    time: "2020.11 - 2021.02",
+                    desc: "负责验证系统功能性，评估并改进系统UI及操作流程，提升用户体验。"
+                }
+            ],
+            skills: ["Figma", "Unity / Unreal", "C# / C++", "After Effects", "HTML/CSS", "用户研究"]
+        };
+
+        const PROJECTS = [
+            {
+                id: 1,
+                title: "Map Mima 场馆",
+                category: "交互装置艺术",
+                tags: ["Unity", "场地设计", "交互设计"],
+                image: "images/封面/场馆.jpg",
+                description: "Map Mima 是一个灯光交互艺术场馆。项目将室外灯带群与室内360度环绕屏连通，用户在室外点阵灯带画布上自由创作，后期系统通过AI技术将其转化为图像并投射到室内屏幕，形成虚实结合的沉浸式体验。",
+                role: "负责人 - 方案设计 / 原型制作",
+                details: ["实地考察与声音地图绘制", "室外灯带与室内环绕屏的联动逻辑设计", "Unity 高保真交互原型开发"],
+                link: "project1.html" // 在这里替换为您的实际项目链接
+            },
+            {
+                id: 2,
+                title: "ABC Education 网页",
+                category: "Web UI 设计及重构",
+                tags: ["Figma", "UX 研究", "网页设计"],
+                image: "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=2132&auto=format&fit=crop",
+                description: "针对 ABC Education 网站的 UI 改进与重设计项目。通过深入的用户调研、画像梳理及用户旅程图分析，重新定义了网站的视觉语言与交互逻辑。项目包含多轮用户测试与迭代，最终输出了高保真交互原型。",
+                role: "负责人 - 用户调研 / UI 设计",
+                details: ["用户画像与用户旅程图 (User Journey Map)", "多轮用户测试与反馈迭代", "Figma 高保真原型 搭建"],
+                link: "project2.html" // 在这里替换为您的实际项目链接
+            },
+            {
+                id: 3,
+                title: "WhisperGlow 隐形眼镜",
+                category: "虚拟AI项目设计",
+                tags: ["虚拟", "AI", "产品设计"],
+                image: "images/封面/隐形眼镜.jpg", // 您也可以换成您的海报图
+                description: "设计一款虚拟的结合了 AR 与 AI 技术的隐形眼镜，重新定义现实视觉体验。",
+                role: "UX 设计师",
+                details: ["产品概念设计", "说明书设计", "网站交互原型"],
+                link: "project3.html" // 在这里替换为您的实际项目链接
+            }
+        ];
+
+        // --- 3. 界面组件 ---
+
+        const ScrollIndicator = () => (
+            <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce text-zinc-500">
+                <Icons.ChevronDown size={32} />
+            </div>
+        );
+
+        const SectionTitle = ({ children, subtitle }) => (
+            <div className="mb-12">
+                <h2 className="text-4xl md:text-5xl font-bold tracking-tighter text-white mb-4">{children}</h2>
+                <div className="w-20 h-1 bg-blue-500 mb-4"></div>
+                {subtitle && <p className="text-zinc-400 text-lg">{subtitle}</p>}
+            </div>
+        );
+
+        const SkillBadge = ({ skill }) => (
+            <span className="px-4 py-2 bg-zinc-800 text-zinc-300 rounded-full text-sm font-medium border border-zinc-700 hover:border-blue-500 hover:text-blue-400 transition-colors cursor-default">
+                {skill}
+            </span>
+        );
+
+        const ProjectCard = ({ project, onClick }) => (
+            <div onClick={() => onClick(project)} className="group relative h-[400px] w-full bg-zinc-900 overflow-hidden cursor-pointer rounded-lg border border-zinc-800 hover:border-zinc-600 transition-all duration-500">
+                <div className="absolute inset-0 overflow-hidden">
+                    <img src={project.image} alt={project.title} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 group-hover:scale-110 transition-transform duration-700 ease-in-out" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent opacity-90"></div>
+                </div>
+                <div className="absolute bottom-0 left-0 w-full p-8 translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                    <p className="text-blue-400 text-sm font-mono tracking-widest mb-2 uppercase">{project.category}</p>
+                    <h3 className="text-3xl font-bold text-white mb-2 group-hover:text-blue-100 transition-colors">{project.title}</h3>
+                    <div className="flex flex-wrap gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
+                        {project.tags.map(tag => <span key={tag} className="text-xs text-zinc-400 border border-zinc-700 px-2 py-1 rounded">{tag}</span>)}
+                    </div>
+                    <div className="mt-6 flex items-center text-white font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-200">
+                        查看详情 <span className="ml-2"><Icons.ArrowRight size={16} /></span>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const ProjectModal = ({ project, onClose }) => {
+            if (!project) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
+                    <div className="absolute inset-0 bg-black/90 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+                    <div className="relative w-full max-w-5xl h-full md:h-auto md:max-h-[90vh] bg-zinc-900 rounded-2xl overflow-y-auto border border-zinc-800 shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col md:flex-row">
+                        <button onClick={onClose} className="absolute top-6 right-6 z-10 p-2 bg-black/50 rounded-full text-white hover:bg-white hover:text-black transition-colors"><Icons.X size={24} /></button>
+                        <div className="md:w-1/2 h-64 md:h-auto relative shrink-0">
+                            <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent md:bg-gradient-to-r"></div>
+                        </div>
+                        <div className="md:w-1/2 p-8 md:p-12 flex flex-col">
+                            <div className="space-y-6">
+                                <div>
+                                    <p className="text-blue-500 font-mono text-sm tracking-wider uppercase mb-2">{project.category}</p>
+                                    <h2 className="text-4xl font-bold text-white mb-4">{project.title}</h2>
+                                    <div className="flex flex-wrap gap-2">{project.tags.map(tag => <span key={tag} className="px-3 py-1 bg-zinc-800 text-zinc-300 text-xs rounded-full">{tag}</span>)}</div>
+                                </div>
+                                <div className="border-l-2 border-zinc-700 pl-4"><p className="text-zinc-500 text-sm uppercase mb-1">担任角色</p><p className="text-zinc-200">{project.role}</p></div>
+                                <div><h4 className="text-white font-semibold mb-2">项目概览</h4><p className="text-zinc-400 leading-relaxed">{project.description}</p></div>
+                                <div>
+                                    <h4 className="text-white font-semibold mb-2">核心贡献</h4>
+                                    <ul className="space-y-2">{project.details.map((detail, idx) => <li key={idx} className="flex items-start text-zinc-400"><span className="mr-2 text-blue-500">•</span>{detail}</li>)}</ul>
+                                </div>
+                                
+                                {/* 链接跳转按钮 */}
+                                <div className="pt-6 mt-4 border-t border-zinc-800">
+                                    <a 
+                                        href={project.link} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-full transition-all group"
+                                    >
+                                        <span className="mr-2"><Icons.ExternalLink size={18} /></span>
+                                        访问项目主页
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 4. 主程序 ---
+
+        function Portfolio() {
+            const [activeSection, setActiveSection] = useState('home');
+            const [selectedProject, setSelectedProject] = useState(null);
+
+            const sections = [
+                { id: 'home', label: '首页' },
+                { id: 'resume', label: '简历' },
+                { id: 'work', label: '作品' },
+                { id: 'contact', label: '联系' }
+            ];
+
+            const scrollTo = (id) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                    setActiveSection(id);
+                }
+            };
+
+            useEffect(() => {
+                document.body.style.overflow = selectedProject ? 'hidden' : 'unset';
+            }, [selectedProject]);
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    {/* 导航栏 */}
+                    <nav className="fixed top-0 left-0 w-full z-40 bg-black/80 backdrop-blur-md border-b border-zinc-900">
+                        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+                            <div className="text-xl font-bold tracking-tighter text-white">SUHENG<span className="text-blue-500">.</span>TAN</div>
+                            <div className="hidden md:flex space-x-8 text-sm font-medium tracking-wide">
+                                {sections.map((item) => (
+                                    <button key={item.id} onClick={() => scrollTo(item.id)} className="text-zinc-400 hover:text-white transition-colors">{item.label}</button>
+                                ))}
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* 1. 封面 (Hero) */}
+                    <section id="home" className="relative h-screen flex flex-col justify-center px-6 md:px-20 overflow-hidden">
+                        <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-blue-900/20 rounded-full blur-[120px] pointer-events-none"></div>
+                        <div className="max-w-5xl z-10 fade-in-up">
+                            <p className="text-blue-500 font-mono mb-4 tracking-widest">2025 交互设计作品集</p>
+                            <h1 className="text-6xl md:text-8xl font-bold text-white leading-tight mb-6">设计 · <br /><span className="text-zinc-500">数字体验</span></h1>
+                            <p className="text-xl text-zinc-400 max-w-2xl leading-relaxed mb-10">你好，我是{RESUME_DATA.name}。一名专注于用户体验与数字互动的交互设计师。<br />通过结合游戏开发背景与设计思维，创造引人入胜的数字化产品。</p>
+                            <div className="flex gap-4">
+                                <button onClick={() => scrollTo('work')} className="px-8 py-4 bg-white text-black font-bold rounded-full hover:bg-blue-500 hover:text-white transition-all flex items-center group">查看作品 <span className="ml-2 group-hover:translate-x-1 transition-transform"><Icons.ArrowRight size={20} /></span></button>
+                                <button onClick={() => scrollTo('resume')} className="px-8 py-4 border border-zinc-700 text-white rounded-full hover:border-zinc-500 transition-all">了解更多</button>
+                            </div>
+                        </div>
+                        <ScrollIndicator />
+                    </section>
+
+                    {/* 2. 简历 (Resume) */}
+                    <section id="resume" className="py-24 px-6 md:px-20 bg-zinc-950 border-t border-zinc-900">
+                        <div className="max-w-6xl mx-auto">
+                            <SectionTitle subtitle="Education & Experience">关于我</SectionTitle>
+                            <div className="grid md:grid-cols-2 gap-16">
+                                <div className="space-y-12">
+                                    <div>
+                                        <h3 className="flex items-center text-xl font-bold text-white mb-6"><span className="mr-3 text-blue-500"><Icons.Layers size={24}/></span> 教育经历</h3>
+                                        <div className="space-y-8 border-l border-zinc-800 pl-8 ml-3">
+                                            {RESUME_DATA.education.map((edu, idx) => (
+                                                <div key={idx} className="relative">
+                                                    <span className="absolute -left-[37px] top-1 w-4 h-4 rounded-full bg-zinc-800 border-2 border-zinc-950"></span>
+                                                    <h4 className="text-lg font-bold text-white">{edu.school}</h4>
+                                                    <p className="text-blue-400 text-sm mb-2">{edu.degree} | {edu.time}</p>
+                                                    <p className="text-zinc-500 text-sm leading-relaxed">{edu.desc}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h3 className="flex items-center text-xl font-bold text-white mb-6"><span className="mr-3 text-blue-500"><Icons.Zap size={24}/></span> 工作/实习</h3>
+                                        <div className="space-y-8 border-l border-zinc-800 pl-8 ml-3">
+                                            {RESUME_DATA.experience.map((exp, idx) => (
+                                                <div key={idx} className="relative">
+                                                    <span className="absolute -left-[37px] top-1 w-4 h-4 rounded-full bg-zinc-800 border-2 border-zinc-950"></span>
+                                                    <h4 className="text-lg font-bold text-white">{exp.company}</h4>
+                                                    <p className="text-blue-400 text-sm mb-2">{exp.role} | {exp.time}</p>
+                                                    <p className="text-zinc-500 text-sm leading-relaxed">{exp.desc}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="bg-zinc-900 p-8 rounded-2xl border border-zinc-800 sticky top-24">
+                                        <h3 className="flex items-center text-xl font-bold text-white mb-6"><span className="mr-3 text-blue-500"><Icons.PenTool size={24}/></span> 专业技能</h3>
+                                        <div className="flex flex-wrap gap-3 mb-10">{RESUME_DATA.skills.map(skill => <SkillBadge key={skill} skill={skill} />)}</div>
+                                        <h3 className="flex items-center text-xl font-bold text-white mb-6"><span className="mr-3 text-blue-500"><Icons.Code size={24}/></span> 自我评价</h3>
+                                        <p className="text-zinc-400 leading-relaxed mb-6">具备扎实的交互设计理论基础与游戏开发技术能力。擅长使用 Unity/Figma 快速构建高保真原型。在复杂项目中，能够充当“设计”与“技术”之间的桥梁，确保创意落地。拥有从需求分析、原型设计到用户测试的完整 UX 流程经验。</p>
+                                        <div className="pt-6 border-t border-zinc-800 flex items-center justify-between text-zinc-500 text-sm"><span>Base: {RESUME_DATA.location}</span><span>状态: 求职中</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* 3. 作品目录 (Work Grid) */}
+                    <section id="work" className="py-24 px-6 md:px-20 bg-black">
+                        <div className="max-w-7xl mx-auto">
+                            <SectionTitle subtitle="Selected Works 2024-2025">精选作品</SectionTitle>
+                            <div className="grid md:grid-cols-2 gap-8">
+                                {PROJECTS.map((project) => (
+                                    <ProjectCard key={project.id} project={project} onClick={setSelectedProject} />
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* 4. 封底 (Back Cover / Contact) */}
+                    <footer id="contact" className="py-32 px-6 bg-zinc-950 relative overflow-hidden border-t border-zinc-900">
+                        <div className="max-w-4xl mx-auto text-center relative z-10">
+                            <h2 className="text-5xl md:text-7xl font-bold text-white mb-8">期待与您共创价值</h2>
+                            <p className="text-zinc-400 text-xl mb-12">感谢您的阅读。如果您对我的作品感兴趣，或有任何合作意向，欢迎随时联系。</p>
+                            <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-16">
+                                <a href={`mailto:${RESUME_DATA.contact.email}`} className="flex items-center px-8 py-4 bg-white text-black rounded-full hover:bg-blue-500 hover:text-white transition-all font-medium"><span className="mr-3"><Icons.Mail size={20} /></span>{RESUME_DATA.contact.email}</a>
+                                <a href={`tel:${RESUME_DATA.contact.phone}`} className="flex items-center px-8 py-4 border border-zinc-700 text-white rounded-full hover:border-blue-500 hover:text-blue-400 transition-all font-medium"><span className="mr-3"><Icons.Phone size={20} /></span>{RESUME_DATA.contact.phone}</a>
+                            </div>
+                            <div className="flex items-center justify-center gap-8 text-zinc-600">
+                                <div className="flex flex-col items-center"><div className="mb-2 text-zinc-500"><Icons.MapPin size={24} /></div><span className="text-sm">中国, 深圳 / 长沙</span></div>
+                                <div className="flex flex-col items-center"><div className="mb-2 text-zinc-500"><Icons.Github size={24} /></div><span className="text-sm">github.com/Samuel-281</span></div>
+                            </div>
+                        </div>
+                        <div className="mt-20 text-center text-zinc-800 text-sm">&copy; 2025 Tan Suheng. All Rights Reserved.</div>
+                    </footer>
+
+                    {/* 作品详情模态框 */}
+                    {selectedProject && <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} />}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Portfolio />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABC Education | 平台重构与体验升级</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { background-color: #050505; color: #e4e4e7; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        .glass-panel { background: rgba(30, 30, 35, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .nav-glass { background: rgba(5, 5, 5, 0.8); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        /* 品牌色渐变：从 ABC 的标志性黄/黑/白 提取灵感，这里使用充满活力的橙黄渐变代表 Gen Z */
+        .text-gradient { background: linear-gradient(to right, #fbbf24, #f59e0b); -webkit-background-clip: text; color: transparent; }
+        .fade-in { animation: fadeIn 1s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- 图标组件 ---
+        const Icon = ({ d, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{d}</svg>
+        );
+        const Icons = {
+            ArrowLeft: <path d="M19 12H5M12 19l-7-7 7-7"/>,
+            Target: <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>,
+            Users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
+            Search: <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>,
+            Brain: <><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></>,
+            Lightbulb: <><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></>,
+            Layout: <><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></>,
+            Zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>,
+            Briefcase: <><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></>,
+            Image: <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>,
+            ChevronRight: <path d="m9 18 6-6-6-6"/>,
+            ChevronLeft: <path d="m15 18-6-6 6-6"/>,
+            ZoomIn: <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/></>,
+            X: <path d="M18 6 6 18M6 6l12 12"/>,
+            CheckCircle: <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>,
+            Figma: <><path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z"/><path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z"/><path d="M12 12.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0z"/><path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z"/><path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z"/></>
+        };
+
+        const ProjectPage = () => {
+            const [scrollProgress, setScrollProgress] = useState(0);
+            const [lightboxImg, setLightboxImg] = useState(null);
+            const [isAutoScrollPaused, setIsAutoScrollPaused] = useState(false); // 控制自动滚动暂停
+            const scrollRef = useRef(null);
+
+            // 滚动进度条监听
+            useEffect(() => {
+                const handleScroll = () => {
+                    const total = document.documentElement.scrollTop;
+                    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                    setScrollProgress(total / height);
+                }
+                window.addEventListener('scroll', handleScroll);
+                return () => window.removeEventListener('scroll', handleScroll);
+            }, []);
+
+            // 自动滚动逻辑
+            useEffect(() => {
+                const gallery = scrollRef.current;
+                if (!gallery) return;
+
+                const autoScrollInterval = setInterval(() => {
+                    if (isAutoScrollPaused) return; // 如果暂停则不滚动
+
+                    const maxScrollLeft = gallery.scrollWidth - gallery.clientWidth;
+                    
+                    // 如果已经滚动到接近最右边 (允许 10px 误差)，则回到开头
+                    if (gallery.scrollLeft >= maxScrollLeft - 10) {
+                        gallery.scrollTo({ left: 0, behavior: 'smooth' });
+                    } else {
+                        // 否则向右滚动 400px (与按钮点击一致)
+                        gallery.scrollBy({ left: 400, behavior: 'smooth' });
+                    }
+                }, 3000); // 每 3 秒滚动一次
+
+                return () => clearInterval(autoScrollInterval);
+            }, [isAutoScrollPaused]);
+
+            const scrollGallery = (direction) => {
+                if (scrollRef.current) {
+                    const { current } = scrollRef;
+                    const scrollAmount = direction === 'left' ? -400 : 400;
+                    current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                }
+            };
+
+            const ZoomableImage = ({ src, alt, className }) => (
+                <div 
+                    className={`relative group cursor-zoom-in overflow-hidden ${className}`}
+                    onClick={() => setLightboxImg(src)}
+                >
+                    <img src={src} alt={alt} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <div className="bg-black/60 backdrop-blur-sm p-3 rounded-full text-white">
+                            <Icon d={Icons.ZoomIn} className="w-6 h-6" />
+                        </div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen relative overflow-x-hidden selection:bg-yellow-500/30">
+                    
+                    {/* 灯箱 */}
+                    {lightboxImg && (
+                        <div 
+                            className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-lg flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-200"
+                            onClick={() => setLightboxImg(null)}
+                        >
+                            <button className="absolute top-6 right-6 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors">
+                                <Icon d={Icons.X} className="w-8 h-8" />
+                            </button>
+                            <img 
+                                src={lightboxImg} 
+                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl scale-in-95 animate-in duration-200" 
+                                onClick={(e) => e.stopPropagation()} 
+                                alt="Full screen preview"
+                            />
+                        </div>
+                    )}
+
+                    {/* 导航栏 */}
+                    <nav className="fixed top-0 w-full z-40 bg-black/80 backdrop-blur-md border-b border-zinc-900">
+                        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+                            <a href="index.html" className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group">
+                                <Icon d={Icons.ArrowLeft} className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                                <span className="font-medium tracking-wide uppercase">返回首页</span>
+                            </a>
+                            <div className="text-xl font-bold tracking-tighter text-white">
+                                ABC Education<span className="text-yellow-500">.</span>平台重构
+                            </div>
+                        </div>
+                        <div className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-yellow-600 to-orange-500 transition-all duration-100" style={{ width: `${scrollProgress * 100}%` }}></div>
+                    </nav>
+
+                    {/* 1. 封面 */}
+                    <header className="relative h-screen flex flex-col justify-center items-center px-6 text-center pt-20">
+                        <div className="absolute inset-0 z-0">
+                            {/* REPLACE: 建议放项目海报图 */}
+                            <img src="images/project2/封面.png" className="w-full h-full object-cover opacity-20" alt="Education Background" />
+                            <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-transparent to-black"></div>
+                        </div>
+                        <div className="relative z-10 max-w-5xl fade-in">
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-sm font-mono mb-8 tracking-widest text-yellow-300">
+                                Web UI/UX 设计 · 体验升级
+                            </div>
+                            <h1 className="text-5xl md:text-8xl font-bold mb-6 tracking-tight text-white leading-tight">
+                                ABC Education<br/><span className="text-gradient">平台重构</span>
+                            </h1>
+                            <p className="text-xl md:text-2xl text-zinc-400 max-w-3xl mx-auto leading-relaxed font-light">
+                                以“职业规划”为切入点，<br/>
+                                赋能 Gen Z，打造连接学习与未来的动态平台。
+                            </p>
+                        </div>
+                        <div className="absolute bottom-10 animate-bounce text-zinc-600">
+                            <span className="text-sm tracking-widest">向下滚动探索</span>
+                        </div>
+                    </header>
+
+                    <main className="space-y-40 pb-32">
+                        
+                        {/* 2. 项目概况 */}
+                        <section className="max-w-6xl mx-auto px-6 pt-20 border-b border-zinc-900 pb-20">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+                                <div className="md:col-span-2">
+                                    <h3 className="text-white text-xl font-bold mb-4 flex items-center gap-2"><Icon d={Icons.Target} className="w-5 h-5 text-yellow-500"/> 项目背景与目标</h3>
+                                    <p className="text-zinc-400 leading-relaxed mb-4">
+                                        ABC Education 现有的资源主要针对中小学师生。目前的挑战是如何利用其庞大的资源库，吸引并留住日益增长的“终身学习者”群体。
+                                    </p>
+                                    <p className="text-zinc-400 leading-relaxed">
+                                        <strong>核心任务：</strong> 拓展平台功能，增加职业板块、社交知识 PK 和个性化推荐，为 Z 世代（Gen Z）提供更有针对性的学习体验，帮助他们将学习内容与职业发展需求相结合。
+                                    </p>
+                                </div>
+                                <div>
+                                    <h3 className="text-white text-sm font-bold mb-4 uppercase tracking-wider text-zinc-500">我的角色</h3>
+                                    <ul className="space-y-2 text-zinc-300">
+                                        <li>• 用户调研 (User Researcher)</li>
+                                        <li>• 原型设计与测试</li>
+                                        <li>• 需求定义</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 className="text-white text-sm font-bold mb-4 uppercase tracking-wider text-zinc-500">设计方法</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['Brainwriting', 'Crazy 8', 'Black Mirror', 'A/B Testing'].map(tag => (
+                                            <span key={tag} className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs text-zinc-400">{tag}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* 3. 设计过程 */}
+                        <section className="max-w-6xl mx-auto px-6">
+                            <div className="mb-16">
+                                <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">设计思维过程</h2>
+                                <div className="w-20 h-1 bg-zinc-700 rounded-full"></div>
+                            </div>
+
+                            <div className="space-y-24">
+                                
+                                {/* 3.1 调研与发现 */}
+                                <div>
+                                    <h3 className="text-xl text-zinc-300 mb-8 font-bold flex items-center">
+                                        <span className="p-2 bg-blue-500/20 rounded-lg text-blue-400 mr-3"><Icon d={Icons.Search} className="w-5 h-5"/></span>
+                                        01. 调研与发现 (Research)
+                                    </h3>
+                                    <div className="grid md:grid-cols-2 gap-8">
+                                        <div className="space-y-6">
+                                            <p className="text-zinc-400 leading-relaxed">
+                                                我们通过对 Z 世代（12-27岁）的定性访谈（5人）和定量问卷（68份），深入了解了他们的学习习惯。
+                                            </p>
+                                            <div className="glass-panel p-6 rounded-lg border-l-2 border-blue-500">
+                                                <h4 className="text-white font-bold mb-2 flex items-center">关键发现 (Key Insights)</h4>
+                                                <ul className="space-y-3 text-sm text-zinc-400">
+                                                    <li className="flex gap-2"><span>🎯</span> <strong>职业相关性：</strong> 用户希望学习内容能直接关联未来的就业机会，尤其是个人成长和语言学习。</li>
+                                                    <li className="flex gap-2"><span>🧩</span> <strong>碎片化学习：</strong> 偏好灵活的、模块化的微课 (Micro-learning)。</li>
+                                                    <li className="flex gap-2"><span>🏆</span> <strong>激励机制：</strong> 渴望通过徽章、证书等显性奖励来维持动力。</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden aspect-[4/3] relative">
+                                            {/* REPLACE: 这里可以放调研数据图表或 SWOT 分析图 */}
+                                            <ZoomableImage 
+                                                src="images/project2/调研.png" 
+                                                alt="用户调研数据" 
+                                                className="w-full h-full"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 3.2 定义与构思 */}
+                                <div>
+                                    <h3 className="text-xl text-zinc-300 mb-8 font-bold flex items-center">
+                                        <span className="p-2 bg-yellow-500/20 rounded-lg text-yellow-400 mr-3"><Icon d={Icons.Brain} className="w-5 h-5"/></span>
+                                        02. 定义与构思 (Define & Ideate)
+                                    </h3>
+                                    <div className="grid md:grid-cols-2 gap-8">
+                                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden aspect-[4/3] relative order-2 md:order-1">
+                                            {/* REPLACE: 这里放用户画像 (Alex/Anna) 或构思草图 */}
+                                            <ZoomableImage 
+                                                src="images/project2/persona1.jpg" 
+                                                alt="用户画像" 
+                                                className="w-full h-full"
+                                            />
+                                        </div>
+                                        <div className="space-y-4 order-1 md:order-2 flex flex-col justify-center">
+                                            <p className="text-zinc-400 leading-relaxed">
+                                                我们构建了两个典型用户画像：<strong>Anna (迷茫的大学生)</strong> 和 <strong>Alex (忙碌的项目经理)</strong>，他们的共同痛点是现有平台缺乏个性化和职业指导。
+                                            </p>
+                                            <p className="text-zinc-400 leading-relaxed">
+                                                在构思阶段，我们使用了 <strong>“Brainwriting”</strong> 和 <strong>“Crazy 8”</strong> 来发散思维。此外，特别使用了 <strong>“黑色镜子 (Black Mirror)”</strong> 头脑风暴法来预判伦理风险：例如，如果只推荐热门职业，是否会限制用户的视野？
+                                            </p>
+                                            <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800">
+                                                <h4 className="text-red-400 text-sm font-bold mb-2">潜在风险：</h4>
+                                                <p className="text-zinc-500 text-xs">如果平台只推荐“热门高薪”职业，会不会限制用户的选择，甚至引发焦虑？</p>
+                                            </div>
+                                            <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800">
+                                                <h4 className="text-green-400 text-sm font-bold mb-2">应对策略：</h4>
+                                                <p className="text-zinc-500 text-xs">不仅关注薪资，更强调“个人满足感”和“多样化路径”，推荐非传统职业。</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 3.3 测试与迭代 */}
+                                <div>
+                                    <h3 className="text-xl text-zinc-300 mb-8 font-bold flex items-center">
+                                        <span className="p-2 bg-purple-500/20 rounded-lg text-purple-400 mr-3"><Icon d={Icons.Layout} className="w-5 h-5"/></span>
+                                        03. 原型测试与迭代 (Prototyping & Testing)
+                                    </h3>
+                                    <div className="grid md:grid-cols-2 gap-8">
+                                        <div className="space-y-6">
+                                            <p className="text-zinc-400 leading-relaxed">
+                                                我们进行了三轮原型迭代，并结合用户旅程地图 (User Journey Mapping)、出声思维法 (Think Aloud) 和 A/B 测试进行验证。
+                                            </p>
+                                            <div className="space-y-4">
+                                                <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800">
+                                                    <h4 className="text-white text-sm font-bold mb-2">迭代 1：隐私保护</h4>
+                                                    <p className="text-zinc-500 text-xs">最初的“职业模拟游戏”因涉及拍摄用户行为，存在隐私侵犯风险，被移除。</p>
+                                                </div>
+                                                <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800">
+                                                    <h4 className="text-white text-sm font-bold mb-2">迭代 2：导航栏优化 (A/B 测试)</h4>
+                                                    <p className="text-zinc-500 text-xs">测试发现纯文字导航效率低。我们在 B 版本中加入了图标辅助，结果显示用户筛选课程的速度显著提升。</p>
+                                                </div>
+                                                <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800">
+                                                    <h4 className="text-white text-sm font-bold mb-2">最终迭代：职业板块</h4>
+                                                    <p className="text-zinc-500 text-xs">根据用户反馈内容枯燥，我们重新设计并引入了“职业板块”，将功能与现有课程紧密结合。</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden aspect-[4/3] relative">
+                                            {/* REPLACE: 这里放 A/B 测试对比图或线框图迭代 */}
+                                            <ZoomableImage 
+                                                src="images/project2/迭代.jpg" 
+                                                alt="原型迭代" 
+                                                className="w-full h-full"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </section>
+
+                        {/* 4. 最终设计方案 (Gallery) - 增加自动滚动功能，鼠标悬停时暂停 */}
+                        <section 
+                            className="max-w-7xl mx-auto px-6 border-t border-zinc-900 pt-20"
+                            onMouseEnter={() => setIsAutoScrollPaused(true)}
+                            onMouseLeave={() => setIsAutoScrollPaused(false)}
+                        >
+                            <div className="flex items-center justify-between mb-8">
+                                <h2 className="text-3xl md:text-4xl font-bold text-white">最终设计方案</h2>
+                                <div className="flex gap-2">
+                                    <button onClick={() => scrollGallery('left')} className="p-3 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white transition-colors border border-zinc-700"><Icon d={Icons.ChevronLeft} className="w-5 h-5"/></button>
+                                    <button onClick={() => scrollGallery('right')} className="p-3 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white transition-colors border border-zinc-700"><Icon d={Icons.ChevronRight} className="w-5 h-5"/></button>
+                                </div>
+                            </div>
+
+                            <div ref={scrollRef} className="flex gap-6 overflow-x-auto hide-scroll pb-8 snap-x snap-mandatory">
+                                {/* Feature 1: 个性化学习路径 */}
+                                <div className="min-w-[85vw] md:min-w-[600px] snap-center">
+                                    <div className="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 aspect-video relative group">
+                                        {/* REPLACE: 个性化推荐界面图 */}
+                                        <ZoomableImage 
+                                            src="images/project2/最终1.jpg" 
+                                            alt="个性化学习路径" 
+                                            className="w-full h-full" 
+                                        />
+                                        <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black to-transparent pointer-events-none">
+                                            <h4 className="text-white font-bold text-lg mb-1">1. 个性化学习路径</h4>
+                                            <p className="text-zinc-400 text-xs">基于用户兴趣和职业目标，智能生成专属课程表，解决“选课难”痛点。</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Feature 2: 职业发展板块 */}
+                                <div className="min-w-[85vw] md:min-w-[600px] snap-center">
+                                    <div className="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 aspect-video relative group">
+                                        {/* REPLACE: 职业板块界面图 */}
+                                        <ZoomableImage 
+                                            src="images/project2/最终3.jpg" 
+                                            alt="职业发展板块" 
+                                            className="w-full h-full" 
+                                        />
+                                        <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black to-transparent pointer-events-none">
+                                            <h4 className="text-white font-bold text-lg mb-1">2. 职业发展板块</h4>
+                                            <p className="text-zinc-400 text-xs">重新分类课程，清晰展示技能与职业的对应关系，提供明确的职业指导。</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Feature 3: 社交互动与PK */}
+                                <div className="min-w-[85vw] md:min-w-[600px] snap-center">
+                                    <div className="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 aspect-video relative group">
+                                        {/* REPLACE: 社交PK界面图 */}
+                                        <ZoomableImage 
+                                            src="images/project2/最终4.jpg" 
+                                            alt="社交互动" 
+                                            className="w-full h-full" 
+                                        />
+                                        <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black to-transparent pointer-events-none">
+                                            <h4 className="text-white font-bold text-lg mb-1">3. 社交互动与知识 PK</h4>
+                                            <p className="text-zinc-400 text-xs">引入好友竞赛机制，通过社交化学习提升趣味性和参与度，打破单向学习的枯燥。</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Feature 4: 课程内容 */}
+                                <div className="min-w-[85vw] md:min-w-[600px] snap-center">
+                                    <div className="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 aspect-video relative group">
+                                        {/* REPLACE: 课程内容 */}
+                                        <ZoomableImage 
+                                            src="images/project2/最终2.jpg" 
+                                            alt="课程内容" 
+                                            className="w-full h-full" 
+                                        />
+                                        <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black to-transparent pointer-events-none">
+                                            <h4 className="text-white font-bold text-lg mb-1">4. 课程内容</h4>
+                                            <p className="text-zinc-400 text-xs">在学习过程中实时添加问答环节，确保第一时间掌握所学内容。</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+
+                        {/* Figma 跳转按钮 (新增，位于底部) */}
+                        <section className="max-w-4xl mx-auto px-6 pb-20 pt-10 text-center">
+                            <div className="p-8 bg-zinc-900 border border-zinc-800 rounded-2xl relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                <h3 className="text-2xl font-bold text-white mb-4 relative z-10">想要体验完整原型？</h3>
+                                <p className="text-zinc-400 mb-8 max-w-lg mx-auto relative z-10">
+                                    访问我们的 Figma 高保真原型，体验完整的交互流程。
+                                </p>
+                                <a 
+                                    href="https://www.figma.com/proto/pDw64lPG3tyIqpveImKe8O/9301-Design-Prototype?page-id=1157%3A626&node-id=1328-1875&node-type=symbol&viewport=-3200%2C-758%2C0.15&t=JhSoBOirmlarbNqH-1&scaling=min-zoom&content-scaling=fixed&starting-point-node-id=1328%3A1875&show-proto-sidebar=1" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="figma-btn inline-flex items-center gap-3 px-8 py-4 bg-white text-black font-bold rounded-full transition-all relative z-10"
+                                >
+                                    <Icon d={Icons.Figma} className="w-6 h-6" />
+                                    <span>在 Figma 中查看原型</span>
+                                </a>
+                            </div>
+                        </section>
+
+                    </main>
+
+                    {/* 底部 */}
+                    <footer className="border-t border-zinc-900 bg-zinc-950 py-24 text-center">
+                        <div className="flex justify-center gap-6">
+                            <a href="index.html" className="px-8 py-3 bg-zinc-800 text-white rounded-full hover:bg-zinc-700 transition-colors">
+                                返回首页
+                            </a>
+                        </div>
+                        <p className="text-zinc-600 mt-8 text-sm">© 2025 ABC Education Project. Designed by Suheng Tan.</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ProjectPage />);
+    </script>
+</body>
+</html>
